@@ -25,3 +25,7 @@ async def upload_file(file: UploadFile = File(...)):
         text = extract_text_from_image(content)
 
     return {"text": text}
+
+@app.get("/")
+def home():
+    return {"message": "🚀 Intellora API is live"}
