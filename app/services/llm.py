@@ -9,6 +9,17 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 def format_response(text: str):
+    """
+    Clean and structure AI output nicely
+    """
+
+    if not text:
+        return "No response"
+
+    # Normalize spacing
+    text = text.replace("\r", "\n")
+
+    # Split lines
     lines = text.split("\n")
     formatted = []
 
@@ -17,19 +28,29 @@ def format_response(text: str):
         if not line:
             continue
 
-        # Remove markdown
-        line = line.replace("**", "").replace("•", "").strip()
+        # Remove markdown artifacts
+        line = line.replace("**", "").strip()
 
-        # Convert numbered list to bullet
-        line = re.sub(r"^\d+\.", "", line).strip()
+        # Convert numbered lists → bullets
+        line = re.sub(r"^\d+\.", "•", line)
 
         # Detect links
-        if "http" in line:
-            urls = re.findall(r'(https?://\S+)', line)
+        urls = re.findall(r'(https?://\S+)', line)
+        if urls:
             for url in urls:
                 formatted.append(f"🔗 {url}")
-        else:
-            formatted.append(f"• {line}")
+            continue
+
+        # Keep headings clean (no bullet)
+        if line.endswith(":"):
+            formatted.append(line)
+            continue
+
+        # Add bullet if not already
+        if not line.startswith("•"):
+            line = f"• {line}"
+
+        formatted.append(line)
 
     return "\n".join(formatted)
 
@@ -37,13 +58,15 @@ def format_response(text: str):
 def generate_llm_answer(query: str, context: str = ""):
     try:
         prompt = f"""
-You are Intellora AI (premium assistant).
+You are Intellora AI (a smart and clean assistant).
 
-STRICT RULES:
-- NO paragraphs
-- ONLY bullet points
-- Short, clean, structured answers
-- If useful → include links
+RULES:
+- Give clear, structured answers
+- Use bullet points for key info
+- Use headings when needed (like "Definition:", "Applications:")
+- Avoid long paragraphs
+- Keep answers readable and professional
+- If useful, include links (each on a new line)
 
 Context:
 {context}
@@ -51,10 +74,7 @@ Context:
 User Question:
 {query}
 
-Answer format:
-• Point
-• Point
-
+Answer cleanly:
 """
 
         res = client.chat.completions.create(
@@ -67,5 +87,5 @@ Answer format:
         return format_response(raw)
 
     except Exception as e:
-        print("ERROR:", e)
+        print("🔥 ERROR:", e)
         return "AI is not responding"
