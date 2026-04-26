@@ -9,44 +9,41 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 def format_response(text: str):
-    """
-    Clean and structure AI output nicely
-    """
-
     if not text:
         return "No response"
 
-    # Normalize spacing
     text = text.replace("\r", "\n")
 
-    # Split lines
     lines = text.split("\n")
     formatted = []
 
     for line in lines:
         line = line.strip()
+
         if not line:
             continue
 
-        # Remove markdown artifacts
-        line = line.replace("**", "").strip()
+        # ❌ remove markdown junk
+        line = line.replace("**", "")
+        line = line.replace("*", "")  # REMOVE *
+        line = line.replace("• •", "•")
 
-        # Convert numbered lists → bullets
-        line = re.sub(r"^\d+\.", "•", line)
+        # Remove numbering
+        line = re.sub(r"^\d+\.", "", line).strip()
 
-        # Detect links
-        urls = re.findall(r'(https?://\S+)', line)
-        if urls:
+        # 🔗 links
+        if "http" in line:
+            urls = re.findall(r'(https?://\S+)', line)
             for url in urls:
-                formatted.append(f"🔗 {url}")
+                formatted.append(f"\n🔗 {url}")
             continue
 
-        # Keep headings clean (no bullet)
-        if line.endswith(":"):
-            formatted.append(line)
+        # 🧠 HEADINGS
+        if ":" in line and len(line.split()) < 6:
+            formatted.append(f"\n{line}")
             continue
 
-        # Add bullet if not already
+        # ✅ clean bullet
         if not line.startswith("•"):
             line = f"• {line}"
 
@@ -58,15 +55,20 @@ def format_response(text: str):
 def generate_llm_answer(query: str, context: str = ""):
     try:
         prompt = f"""
-You are Intellora AI (a smart and clean assistant).
+You are Intellora AI.
 
-RULES:
-- Give clear, structured answers
-- Use bullet points for key info
-- Use headings when needed (like "Definition:", "Applications:")
-- Avoid long paragraphs
-- Keep answers readable and professional
-- If useful, include links (each on a new line)
+STRICT OUTPUT RULES (VERY IMPORTANT):
+- DO NOT write paragraphs
+- DO NOT use *
+- DO NOT mix formats
+- ONLY use:
+    Heading:
+    • point
+    • point
+
+- Leave space between sections
+- Keep answers clean and readable
+- Links should be separate
 
 Context:
 {context}
@@ -74,13 +76,23 @@ Context:
 User Question:
 {query}
 
-Answer cleanly:
+Correct format example:
+
+Definition:
+• Point
+• Point
+
+Applications:
+• Point
+• Point
+
+Now answer:
 """
 
         res = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.6
+            temperature=0.5
         )
 
         raw = res.choices[0].message.content
