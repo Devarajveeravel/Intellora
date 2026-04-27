@@ -1,10 +1,12 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes.query import router
-from app.services.file_parser import extract_text_from_pdf, extract_text_from_image
 
-app = FastAPI(title="Intellora AI")
+from app.routes.query import router as query_router
+from app.routes.upload import router as upload_router
 
+app = FastAPI()
+
+# ✅ CORS (important for frontend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,19 +15,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
+# ✅ REGISTER ROUTES
+app.include_router(query_router)
+app.include_router(upload_router)
 
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    if file.filename.endswith(".pdf"):
-        content = await file.read()
-        text = extract_text_from_pdf(content)
-    else:
-        content = await file.read()
-        text = extract_text_from_image(content)
-
-    return {"text": text}
 
 @app.get("/")
 def home():
-    return {"message": "🚀 Intellora API is live"}
+    return {"message": "Intellora backend running"}
