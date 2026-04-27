@@ -5,9 +5,17 @@ router = APIRouter()
 
 @router.post("/upload/pdf")
 async def upload_pdf(file: UploadFile = File(...)):
-    text = extract_text_from_pdf(file.file)
+    try:
+        text = extract_text_from_pdf(file.file)
 
-    return {
-        "message": "PDF uploaded successfully",
-        "text": text[:5000]  # ✅ MUST return text
-    }
+        return {
+            "message": "PDF uploaded successfully",
+            "text": text   # 🔥 IMPORTANT
+        }
+
+    except Exception as e:
+        print("UPLOAD ERROR:", e)
+        return {
+            "message": "Upload failed",
+            "text": ""
+        }

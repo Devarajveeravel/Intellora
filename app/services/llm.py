@@ -6,19 +6,19 @@ load_dotenv()
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
+
 def generate_llm_answer(query: str, context: str = ""):
     try:
         prompt = f"""
-You are an intelligent AI assistant.
+You are Intellora AI.
 
 STRICT RULES:
-- Answer ONLY from the provided context if available
-- If context is empty, answer normally
-- ALWAYS use bullet points
+- ONLY bullet points
 - NO paragraphs
-- NO long explanations
-- Keep answers short and clean
-- If you don't know → say "Not found in document"
+- Each point in new line
+- Use simple clear English
+- Answer EXACTLY from context if available
+- If context is empty → answer normally
 
 Context:
 {context}
@@ -33,13 +33,13 @@ Answer format:
 """
 
         res = client.chat.completions.create(
-            model="llama-3.1-8b-instant",  # ✅ stable
+            model="llama3-70b-8192",  # ✅ STABLE + GOOD
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.5
+            temperature=0.3
         )
 
-        return res.choices[0].message.content.strip()
+        return res.choices[0].message.content
 
     except Exception as e:
-        print("LLM ERROR:", e)
-        return "AI is not responding properly right now"
+        print("ERROR:", e)
+        return "• AI is not responding properly right now"

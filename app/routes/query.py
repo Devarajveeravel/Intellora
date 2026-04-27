@@ -13,16 +13,19 @@ class Query(BaseModel):
 
 @router.post("/query")
 def ask(q: Query):
+
     history = memory.get(q.session_id, "")
 
-    # ✅ IMPORTANT: include PDF text properly
-    context = f"""
-Previous Conversation:
-{history}
+    # 🔥 PRIORITY: PDF FIRST
+    if q.file_text:
+        context = f"""
+Use ONLY the following document to answer.
 
-Uploaded Document:
+DOCUMENT:
 {q.file_text}
 """
+    else:
+        context = history
 
     answer = generate_llm_answer(q.query, context)
 
