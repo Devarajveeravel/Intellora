@@ -1,25 +1,59 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import json
+from app.services.llm import generate_llm_answer
 
-from app.routes.query import router as query_router
-from app.routes.upload import router as upload_router
+memory = {}
 
-app = FastAPI()
+class Handler(BaseHTTPRequestHandler):
 
-# ✅ CORS (important for frontend)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    def _set_headers(self):
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Allow-Methods", "*")
+        self.end_headers()
 
-# ✅ REGISTER ROUTES
-app.include_router(query_router)
-app.include_router(upload_router)
+    def do_OPTIONS(self):
+        self._set_headers()
+
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        body = self.rfile.read(content_length)
+
+        if self.path == "/query":
+            data = json.loads(body)
+
+            query = data.get("query", "")
+            session_id = data.get("session_id", "default")
+            file_text = data.get("file_text", "")
+
+            history = memory.get(session_id, "")
+
+            context = ""
+            if file_text:
+                context += f"\nDOCUMENT:\n{file_text[:6000]}\n"
+
+            context += f"\nHISTORY:\n{history}"
+
+            answer = generate_llm_answer(query, context)
+
+            memory[session_id] = history + f"\nUser: {query}\nAI: {answer}"
+
+            self._set_headers()
+            self.wfile.write(json.dumps({"answer": answer}).encode())
+
+        else:
+            self._set_headers()
+            self.wfile.write(json.dumps({"error": "Invalid route"}).encode())
 
 
-@app.get("/")
-def home():
-    return {"message": "Intellora backend running"}
+def run():
+    server_address = ('', 10000)
+    httpd = HTTPServer(server_address, Handler)
+    print("Server running on port 10000")
+    httpd.serve_forever()
+
+
+if __name__ == "__main__":
+    run()
