@@ -10,35 +10,36 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 def generate_llm_answer(query: str, context: str = ""):
     try:
         prompt = f"""
-You are Intellora AI — a highly intelligent assistant like ChatGPT.
+You are Intellora AI.
 
 RULES:
-- Give CLEAR, HIGH-QUALITY answers
-- Use bullet points ONLY when useful
-- Use paragraphs for explanation when needed
-- Answer like a human expert (NOT robotic)
-- If context is provided → use it STRICTLY
+- Answer ONLY from given context if available
+- If PDF content exists → prioritize it STRICTLY
+- NO fake answers
+- Format cleanly using bullet points
+- Use short, sharp points
+- Use headings if needed
+- No long paragraphs
 
-CONTEXT (from uploaded file):
-{context[:3000]}
+CONTEXT:
+{context}
 
 USER QUESTION:
 {query}
 
-RESPONSE STYLE:
-- Start with a clear answer
-- Then explain
-- Then give bullets if needed
-- NO fake or generic answers
+ANSWER FORMAT:
+• Point
+• Point
+• Point
 """
 
         res = client.chat.completions.create(
-            model="llama-3.1-8b-instant",   # ✅ Stable + fast
+            model="llama-3.1-8b-instant",  # ✅ stable + fast
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.5,
+            temperature=0.3
         )
 
-        return res.choices[0].message.content.strip()
+        return res.choices[0].message.content
 
     except Exception as e:
         print("ERROR:", e)

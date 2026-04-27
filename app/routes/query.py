@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from app.services.llm import generate_llm_answer
+from app.services.rag import get_rag_answer
 
 router = APIRouter()
 
@@ -14,20 +15,24 @@ class Query(BaseModel):
 
 @router.post("/query")
 def ask(q: Query):
+
+    # 🔥 STEP 1: Get chat history (clean)
     history = memory.get(q.session_id, "")
 
-    # ✅ PRIORITY: PDF context first
-    context = f"""
-Previous conversation:
-{history}
+    # 🔥 STEP 2: PRIORITY → PDF content (NOT history)
+    context = ""
 
-Document content:
-{q.file_text}
-"""
+    if q.file_text and len(q.file_text.strip()) > 50:
+        context = q.file_text[:4000]   # limit for token safety
+    else:
+        # fallback to RAG
+        rag_data = get_rag_answer(q.query)
+        context = rag_data
 
+    # 🔥 STEP 3: Generate answer
     answer = generate_llm_answer(q.query, context)
 
-    # store memory (lightweight)
-    memory[q.session_id] = history + f"\nUser: {q.query}\nAI: {answer}"
+    # 🔥 STEP 4: store minimal history (avoid pollution)
+    memory[q.session_id] = f"User: {q.query}\nAI: {answer}"
 
     return {"answer": answer}
