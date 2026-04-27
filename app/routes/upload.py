@@ -9,5 +9,5 @@ async def upload_pdf(file: UploadFile = File(...)):
 
     return {
         "message": "PDF uploaded successfully",
-        "text": text[:5000]   # 🔥 THIS WAS MISSING BEFORE
+        "text": text[:5000]  # ✅ MUST return text
     }
