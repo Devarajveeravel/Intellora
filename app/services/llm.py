@@ -8,12 +8,8 @@ load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
+# ✅ FORMAT RESPONSE
 def format_response(text: str):
-    if not text:
-        return "No response"
-
-    text = text.replace("\r", "\n")
-
     lines = text.split("\n")
     formatted = []
 
@@ -23,70 +19,49 @@ def format_response(text: str):
         if not line:
             continue
 
-        # ❌ remove markdown junk
-        line = line.replace("**", "")
-        line = line.replace("*", "")  # REMOVE *
-        line = line.replace("• •", "•")
+        # remove markdown symbols
+        line = line.replace("**", "").replace("*", "").strip()
 
-        # Remove numbering
+        # remove numbering
         line = re.sub(r"^\d+\.", "", line).strip()
 
-        # 🔗 links
+        # detect links
         if "http" in line:
-            urls = re.findall(r'(https?://\S+)', line)
+            urls = re.findall(r"(https?://\S+)", line)
             for url in urls:
-                formatted.append(f"\n🔗 {url}")
-            continue
-
-        # 🧠 HEADINGS
-        if ":" in line and len(line.split()) < 6:
-            formatted.append(f"\n{line}")
-            continue
-
-        # ✅ clean bullet
-        if not line.startswith("•"):
-            line = f"• {line}"
-
-        formatted.append(line)
+                formatted.append(f"🔗 {url}")
+        else:
+            formatted.append(f"• {line}")
 
     return "\n".join(formatted)
 
 
+# ✅ MAIN FUNCTION
 def generate_llm_answer(query: str, context: str = ""):
     try:
+        # limit context
+        if context:
+            context = context[:6000]
+
         prompt = f"""
-You are Intellora AI.
+Answer the question clearly.
 
-STRICT OUTPUT RULES (VERY IMPORTANT):
-- DO NOT write paragraphs
-- DO NOT use *
-- DO NOT mix formats
-- ONLY use:
-    Heading:
-    • point
-    • point
-
-- Leave space between sections
-- Keep answers clean and readable
-- Links should be separate
+RULES:
+- ONLY bullet points
+- NO paragraphs
+- NO introductions like "I am Intellora"
+- Keep answers short and useful
+- If context is provided → answer ONLY from context
 
 Context:
 {context}
 
-User Question:
+Question:
 {query}
 
-Correct format example:
-
-Definition:
-• Point
-• Point
-
-Applications:
-• Point
-• Point
-
-Now answer:
+Answer:
+• point
+• point
 """
 
         res = client.chat.completions.create(
@@ -96,8 +71,9 @@ Now answer:
         )
 
         raw = res.choices[0].message.content
+
         return format_response(raw)
 
     except Exception as e:
-        print("🔥 ERROR:", e)
-        return "AI is not responding"
+        print("LLM ERROR:", e)
+        return "❌ AI not responding properly"

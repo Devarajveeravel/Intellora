@@ -4,6 +4,7 @@ import base64
 
 router = APIRouter()
 
+# ✅ Global storage
 uploaded_data = {
     "pdf": "",
     "image": ""
@@ -12,9 +13,15 @@ uploaded_data = {
 @router.post("/upload/pdf")
 async def upload_pdf(file: UploadFile = File(...)):
     text = extract_text_from_pdf(file.file)
-    uploaded_data["pdf"] = text[:5000]
 
-    return {"message": "PDF uploaded successfully"}
+    # ✅ store text (limit size)
+    uploaded_data["pdf"] = text[:8000]
+
+    return {
+        "message": "PDF uploaded successfully",
+        "text": uploaded_data["pdf"]
+    }
+
 
 @router.post("/upload/image")
 async def upload_image(file: UploadFile = File(...)):
@@ -23,4 +30,6 @@ async def upload_image(file: UploadFile = File(...)):
 
     uploaded_data["image"] = encoded
 
-    return {"message": "Image uploaded successfully"}
+    return {
+        "message": "Image uploaded successfully"
+    }
