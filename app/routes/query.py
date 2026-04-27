@@ -11,21 +11,35 @@ class Query(BaseModel):
     session_id: str
     file_text: str = ""
 
+
+def get_relevant_context(file_text, query):
+    if not file_text:
+        return ""
+
+    chunks = file_text.split("\n")
+
+    # simple keyword match (FAST + WORKS)
+    relevant = []
+    for chunk in chunks:
+        if any(word.lower() in chunk.lower() for word in query.split()):
+            relevant.append(chunk)
+
+    return "\n".join(relevant[:20])  # limit
+
+
 @router.post("/query")
 def ask(q: Query):
-
     history = memory.get(q.session_id, "")
 
-    # 🔥 PRIORITY: PDF FIRST
-    if q.file_text:
-        context = f"""
-Use ONLY the following document to answer.
+    file_context = get_relevant_context(q.file_text, q.query)
 
-DOCUMENT:
-{q.file_text}
+    context = f"""
+Chat History:
+{history}
+
+Document Context:
+{file_context}
 """
-    else:
-        context = history
 
     answer = generate_llm_answer(q.query, context)
 

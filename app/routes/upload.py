@@ -3,19 +3,19 @@ from app.services.file_parser import extract_text_from_pdf
 
 router = APIRouter()
 
+uploaded_text_store = {}
+
 @router.post("/upload/pdf")
 async def upload_pdf(file: UploadFile = File(...)):
-    try:
-        text = extract_text_from_pdf(file.file)
+    text = extract_text_from_pdf(file.file)
 
-        return {
-            "message": "PDF uploaded successfully",
-            "text": text   # 🔥 IMPORTANT
-        }
+    if not text:
+        return {"text": "", "message": "Failed to read PDF"}
 
-    except Exception as e:
-        print("UPLOAD ERROR:", e)
-        return {
-            "message": "Upload failed",
-            "text": ""
-        }
+    # store full text
+    uploaded_text_store["text"] = text[:10000]
+
+    return {
+        "text": uploaded_text_store["text"],
+        "message": "PDF uploaded successfully"
+    }

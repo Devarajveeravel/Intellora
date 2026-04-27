@@ -13,12 +13,11 @@ def generate_llm_answer(query: str, context: str = ""):
 You are Intellora AI.
 
 STRICT RULES:
-- ONLY bullet points
-- NO paragraphs
-- Each point in new line
-- Use simple clear English
-- Answer EXACTLY from context if available
-- If context is empty → answer normally
+- Give clean bullet points
+- No long paragraphs
+- Use markdown (**bold**, code blocks if needed)
+- If from document → answer ONLY from context
+- If not found → say "Not found in document"
 
 Context:
 {context}
@@ -26,20 +25,17 @@ Context:
 User Question:
 {query}
 
-Answer format:
-• point
-• point
-• point
+Answer:
 """
 
         res = client.chat.completions.create(
-            model="llama3-70b-8192",  # ✅ STABLE + GOOD
+            model="llama3-70b-8192",  # stable + best
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
+            temperature=0.5
         )
 
-        return res.choices[0].message.content
+        return res.choices[0].message.content.strip()
 
     except Exception as e:
-        print("ERROR:", e)
-        return "• AI is not responding properly right now"
+        print("LLM ERROR:", e)
+        return "❌ AI is not responding properly right now"
