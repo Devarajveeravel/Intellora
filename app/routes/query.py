@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from app.services.llm import generate_llm_answer
+from app.services.rag import retrieve_context
 
 router = APIRouter()
 
@@ -12,34 +13,15 @@ class Query(BaseModel):
     file_text: str = ""
 
 
-def get_relevant_context(file_text, query):
-    if not file_text:
-        return ""
-
-    chunks = file_text.split("\n")
-
-    # simple keyword match (FAST + WORKS)
-    relevant = []
-    for chunk in chunks:
-        if any(word.lower() in chunk.lower() for word in query.split()):
-            relevant.append(chunk)
-
-    return "\n".join(relevant[:20])  # limit
-
-
 @router.post("/query")
 def ask(q: Query):
     history = memory.get(q.session_id, "")
 
-    file_context = get_relevant_context(q.file_text, q.query)
+    # 🔥 GET PDF CONTEXT
+    rag_context = retrieve_context(q.query)
 
-    context = f"""
-Chat History:
-{history}
-
-Document Context:
-{file_context}
-"""
+    # 🔥 FINAL CONTEXT
+    context = history + "\n" + rag_context + "\n" + q.file_text
 
     answer = generate_llm_answer(q.query, context)
 
