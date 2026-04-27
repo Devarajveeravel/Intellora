@@ -8,7 +8,7 @@ load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-# ✅ FORMAT RESPONSE
+# 🔥 CLEAN FORMATTER
 def format_response(text: str):
     lines = text.split("\n")
     formatted = []
@@ -19,55 +19,62 @@ def format_response(text: str):
         if not line:
             continue
 
-        # remove markdown symbols
-        line = line.replace("**", "").replace("*", "").strip()
+        # remove markdown noise
+        line = re.sub(r"[*_`#>-]", "", line).strip()
 
         # remove numbering
-        line = re.sub(r"^\d+\.", "", line).strip()
+        line = re.sub(r"^\d+[\).\s-]*", "", line)
 
-        # detect links
+        # links
         if "http" in line:
-            urls = re.findall(r"(https?://\S+)", line)
+            urls = re.findall(r'(https?://\S+)', line)
             for url in urls:
                 formatted.append(f"🔗 {url}")
         else:
+            # force bullet
             formatted.append(f"• {line}")
 
     return "\n".join(formatted)
 
 
-# ✅ MAIN FUNCTION
+# 🔥 MAIN LLM
 def generate_llm_answer(query: str, context: str = ""):
     try:
-        # limit context
-        if context:
-            context = context[:6000]
-
         prompt = f"""
-Answer the question clearly.
+You are Intellora AI — a high-quality assistant like ChatGPT.
 
-RULES:
-- ONLY bullet points
+STRICT RULES (VERY IMPORTANT):
+- ALWAYS answer in bullet points
 - NO paragraphs
-- NO introductions like "I am Intellora"
-- Keep answers short and useful
-- If context is provided → answer ONLY from context
+- Each bullet = ONE clear idea
+- Use simple clear English
+- Give correct definitions (no guessing)
+- If coding → give proper code blocks
+- If PDF context exists → answer ONLY from it
+- If no context → answer normally with knowledge
+
+FORMAT:
+• Point 1
+• Point 2
+• Point 3
+
+---------------------
 
 Context:
-{context}
+{context[:4000]}
 
-Question:
+---------------------
+
+User Question:
 {query}
 
 Answer:
-• point
-• point
 """
 
         res = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama-3.1-70b-versatile",  # 🔥 MUCH BETTER MODEL
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.5
+            temperature=0.3
         )
 
         raw = res.choices[0].message.content
@@ -76,4 +83,4 @@ Answer:
 
     except Exception as e:
         print("LLM ERROR:", e)
-        return "❌ AI not responding properly"
+        return "• AI is not responding properly right now"
