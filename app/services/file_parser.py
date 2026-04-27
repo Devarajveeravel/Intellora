@@ -1,8 +1,8 @@
 import PyPDF2
 
-def extract_text_from_pdf(file):
+def extract_text_from_pdf(file_bytes):
     try:
-        reader = PyPDF2.PdfReader(file)
+        reader = PyPDF2.PdfReader(file_bytes)
         text = ""
 
         for page in reader.pages:
@@ -10,9 +10,7 @@ def extract_text_from_pdf(file):
             if content:
                 text += content + "\n"
 
-        print("EXTRACTED TEXT LENGTH:", len(text))
-
-        return text
+        return text.strip()
 
     except Exception as e:
         print("PDF ERROR:", e)

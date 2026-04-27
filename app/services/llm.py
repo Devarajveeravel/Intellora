@@ -1,5 +1,4 @@
 import os
-import re
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -8,75 +7,39 @@ load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-# 🔥 FORMAT CLEANER
-def format_response(text: str):
-    lines = text.split("\n")
-    formatted = []
-
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-
-        # remove markdown symbols
-        line = re.sub(r"[*_`#>-]", "", line)
-
-        # remove numbering
-        line = re.sub(r"^\d+[\).\s-]*", "", line)
-
-        # links
-        if "http" in line:
-            urls = re.findall(r'(https?://\S+)', line)
-            for url in urls:
-                formatted.append(f"🔗 {url}")
-        else:
-            formatted.append(f"• {line}")
-
-    return "\n".join(formatted)
-
-
-# 🔥 MAIN FUNCTION
 def generate_llm_answer(query: str, context: str = ""):
     try:
         prompt = f"""
-You are Intellora AI.
+You are Intellora AI — a highly intelligent assistant like ChatGPT.
 
-STRICT RULES:
-- Always give correct answers
-- Never guess wrong meanings
-- Always respond in bullet points
-- No paragraphs
-- Each bullet = one clear idea
-- Keep it simple and accurate
-- If context exists → use it
-- If no context → use your knowledge
+RULES:
+- Give CLEAR, HIGH-QUALITY answers
+- Use bullet points ONLY when useful
+- Use paragraphs for explanation when needed
+- Answer like a human expert (NOT robotic)
+- If context is provided → use it STRICTLY
 
-FORMAT:
-• Point
-• Point
-• Point
-
-------------------
-Context:
+CONTEXT (from uploaded file):
 {context[:3000]}
-------------------
 
-Question:
+USER QUESTION:
 {query}
 
-Answer:
+RESPONSE STYLE:
+- Start with a clear answer
+- Then explain
+- Then give bullets if needed
+- NO fake or generic answers
 """
 
         res = client.chat.completions.create(
-            model="llama-3.1-8b-instant",   # ✅ STABLE MODEL
+            model="llama-3.1-8b-instant",   # ✅ Stable + fast
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.4
+            temperature=0.5,
         )
 
-        raw = res.choices[0].message.content
-
-        return format_response(raw)
+        return res.choices[0].message.content.strip()
 
     except Exception as e:
-        print("LLM ERROR:", e)
-        return "• AI is temporarily unavailable. Try again."
+        print("ERROR:", e)
+        return "❌ AI is not responding properly right now"
