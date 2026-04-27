@@ -1,8 +1,8 @@
 import PyPDF2
 
-def extract_text_from_pdf(file_bytes):
+def extract_text_from_pdf(file):
     try:
-        reader = PyPDF2.PdfReader(file_bytes)
+        reader = PyPDF2.PdfReader(file)
         text = ""
 
         for page in reader.pages:

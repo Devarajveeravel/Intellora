@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from app.services.llm import generate_llm_answer
-from app.services.rag import retrieve_context
 
 router = APIRouter()
 
@@ -17,11 +16,18 @@ class Query(BaseModel):
 def ask(q: Query):
     history = memory.get(q.session_id, "")
 
-    # 🔥 GET PDF CONTEXT
-    rag_context = retrieve_context(q.query)
+    # 🔥 SMART CONTEXT (THIS FIXES YOUR PDF ISSUE)
+    context = ""
 
-    # 🔥 FINAL CONTEXT
-    context = history + "\n" + rag_context + "\n" + q.file_text
+    if q.file_text:
+        context += f"""
+You are answering based ONLY on the uploaded document.
+
+DOCUMENT:
+{q.file_text[:6000]}
+"""
+
+    context += f"\nConversation:\n{history}"
 
     answer = generate_llm_answer(q.query, context)
 
