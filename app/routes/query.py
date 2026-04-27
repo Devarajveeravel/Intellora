@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from app.services.llm import generate_llm_answer
-from app.routes.upload import uploaded_data  # ✅ IMPORTANT
+from app.routes.upload import uploaded_data
 
 router = APIRouter()
 
@@ -16,15 +16,14 @@ class Query(BaseModel):
 def ask(q: Query):
     history = memory.get(q.session_id, "")
 
-    # ✅ Get document context from uploaded files
-    doc_context = uploaded_data.get("pdf", "")
+    pdf_text = uploaded_data.get("pdf", "")
 
-    # ✅ Combine everything
-    context = f"{doc_context}\n{history}"
+    print("PDF LENGTH:", len(pdf_text))
+
+    context = f"{pdf_text}\n{history}"
 
     answer = generate_llm_answer(q.query, context)
 
-    # ✅ Save conversation
     memory[q.session_id] = history + f"\nUser: {q.query}\nAI: {answer}"
 
     return {"answer": answer}

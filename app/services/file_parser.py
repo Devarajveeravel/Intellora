@@ -1,16 +1,19 @@
 import PyPDF2
 
-# ✅ PDF WORKS
-def extract_text_from_pdf(file_bytes):
+def extract_text_from_pdf(file):
     try:
-        reader = PyPDF2.PdfReader(file_bytes)
+        reader = PyPDF2.PdfReader(file)
         text = ""
+
         for page in reader.pages:
-            text += page.extract_text() or ""
+            content = page.extract_text()
+            if content:
+                text += content + "\n"
+
+        print("EXTRACTED TEXT LENGTH:", len(text))
+
         return text
+
     except Exception as e:
-        return "Error reading PDF"
-
-
-def extract_text_from_image(file_bytes):
-    return "⚠️ Image OCR not supported in live version"
+        print("PDF ERROR:", e)
+        return ""
