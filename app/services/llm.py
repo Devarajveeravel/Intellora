@@ -72,10 +72,10 @@ Answer:
 """
 
         res = client.chat.completions.create(
-            model="llama-3.1-70b-versatile",  # 🔥 MUCH BETTER MODEL
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
-        )
+    model="mixtral-8x7b-32768",  # ✅ SAFE MODEL
+    messages=[{"role": "user", "content": prompt}],
+    temperature=0.3
+     )
 
         raw = res.choices[0].message.content
 
