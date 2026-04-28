@@ -27,29 +27,21 @@ class QueryRequest(BaseModel):
 def force_final_format(text: str):
     import re
 
-    # remove bullets/symbols
+    # clean text
     text = text.replace("•", " ").replace("-", " ")
-
-    # normalize spaces
     text = re.sub(r"\s+", " ", text).strip()
 
-    # 🔥 HARD SPLIT (every 12–18 words)
-    words = text.split()
+    # split into sentences OR chunks
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+
     lines = []
-    chunk = []
+    for s in sentences:
+        s = s.strip()
+        if s:
+            lines.append(s)
 
-    for word in words:
-        chunk.append(word)
-
-        if len(chunk) >= 14:  # adjust size if needed
-            lines.append(" ".join(chunk))
-            chunk = []
-
-    # add remaining
-    if chunk:
-        lines.append(" ".join(chunk))
-
-    return "\n".join(lines)
+    # 🔥 CRITICAL: double newline for markdown
+    return "\n\n".join(lines)
 
 
 # ✅ QUERY API (FINAL FIXED)
