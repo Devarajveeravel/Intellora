@@ -1,28 +1,32 @@
 import os
+import re
 from groq import Groq
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-# 🔥 FORMAT CLEAN LINE-BY-LINE (NO BULLETS)
-def format_clean_lines(text: str):
-    # Replace bullet symbols if model adds
-    text = text.replace("•", "\n")
+# 🔥 FORCE STRUCTURE (REAL FIX)
+def force_structure(text: str):
+    # Remove bullet symbols
+    text = text.replace("•", " ").replace("-", " ")
 
-    # Split into lines
-    lines = text.split("\n")
+    # Normalize spaces
+    text = re.sub(r"\s+", " ", text)
+
+    # Split into sentences (very important)
+    sentences = re.split(r'(?<=[.!?])\s+', text)
 
     clean = []
-    for line in lines:
-        line = line.strip()
+    for s in sentences:
+        s = s.strip()
 
-        if not line:
+        if not s:
             continue
 
-        # Capitalize first letter nicely
-        line = line[0].upper() + line[1:] if len(line) > 1 else line
+        # Capitalize properly
+        s = s[0].upper() + s[1:] if len(s) > 1 else s
 
-        clean.append(line)
+        clean.append(s)
 
     return "\n".join(clean)
 
@@ -32,15 +36,11 @@ def generate_llm_answer(query: str, context: str = ""):
         prompt = f"""
 You are Intellora AI.
 
-RULES:
-- DO NOT use bullet symbols (•)
-- DO NOT write paragraphs
-- Write each point on a NEW LINE
-- Each line should be clear and complete sentence
-- Keep answers detailed but structured
-- If code → use ``` blocks
-- If context exists → answer ONLY from it
-- If not found → say "Not found in document"
+STRICT RULES:
+- Do NOT write paragraphs
+- Do NOT use bullet symbols
+- Write clear full sentences
+- Each idea must be a separate sentence
 
 Context:
 {context}
@@ -52,13 +52,13 @@ Question:
         res = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.4
+            temperature=0.3
         )
 
         raw = res.choices[0].message.content.strip()
 
-        # 🔥 CLEAN FORMAT
-        return format_clean_lines(raw)
+        # 🔥 HARD FIX HERE
+        return force_structure(raw)
 
     except Exception as e:
         return f"Error: {str(e)}"
