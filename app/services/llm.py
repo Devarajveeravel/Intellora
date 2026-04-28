@@ -8,11 +8,13 @@ def generate_llm_answer(query: str, context: str = ""):
         prompt = f"""
 You are Intellora AI.
 
-- Answer ONLY in bullet points
+STRICT RULES:
+- Always answer in bullet points
 - No paragraphs
-- Use clean structure
-- If code → use markdown ``` blocks
-- If context given → answer from it
+- Clean structure
+- If code → use proper markdown ``` blocks
+- If context is provided → answer ONLY from it
+- If not found → say "• Not found in document"
 
 Context:
 {context}
@@ -22,8 +24,9 @@ Question:
 """
 
         res = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",  # ✅ FIXED MODEL
             messages=[{"role": "user", "content": prompt}],
+            temperature=0.4
         )
 
         return res.choices[0].message.content.strip()
