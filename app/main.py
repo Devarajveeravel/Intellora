@@ -25,24 +25,31 @@ class QueryRequest(BaseModel):
 
 # 🔥 FINAL FORMAT ENFORCER (MAIN FIX)
 def force_final_format(text: str):
-    # remove bullets / unwanted chars
+    import re
+
+    # remove bullets/symbols
     text = text.replace("•", " ").replace("-", " ")
 
     # normalize spaces
-    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
 
-    # split into sentences
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    # 🔥 HARD SPLIT (every 12–18 words)
+    words = text.split()
+    lines = []
+    chunk = []
 
-    clean = []
-    for s in sentences:
-        s = s.strip()
-        if not s:
-            continue
-        clean.append(s)
+    for word in words:
+        chunk.append(word)
 
-    # return line-by-line (NOT paragraph)
-    return "\n".join(clean)
+        if len(chunk) >= 14:  # adjust size if needed
+            lines.append(" ".join(chunk))
+            chunk = []
+
+    # add remaining
+    if chunk:
+        lines.append(" ".join(chunk))
+
+    return "\n".join(lines)
 
 
 # ✅ QUERY API (FINAL FIXED)
