@@ -3,7 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from app.services.file_parser import extract_text
 from app.services.rag import ingest_document, retrieve_context
-from app.services.llm import generate_llm_answer  # ✅ IMPORTANT
+from app.services.llm import generate_llm_answer
+import re
 
 app = FastAPI()
 
@@ -22,6 +23,28 @@ class QueryRequest(BaseModel):
     file_text: str = ""
 
 
+# 🔥 FINAL FORMAT ENFORCER (MAIN FIX)
+def force_final_format(text: str):
+    # remove bullets / unwanted chars
+    text = text.replace("•", " ").replace("-", " ")
+
+    # normalize spaces
+    text = re.sub(r"\s+", " ", text)
+
+    # split into sentences
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+
+    clean = []
+    for s in sentences:
+        s = s.strip()
+        if not s:
+            continue
+        clean.append(s)
+
+    # return line-by-line (NOT paragraph)
+    return "\n".join(clean)
+
+
 # ✅ QUERY API (FINAL FIXED)
 @app.post("/query")
 def query_api(data: QueryRequest):
@@ -33,10 +56,13 @@ def query_api(data: QueryRequest):
         ingest_document(file_text)
         context = retrieve_context(query)
 
-    # 🔥 USE LLM FILE (THIS FIXES YOUR ISSUE)
-    answer = generate_llm_answer(query, context)
+    # 🔥 GET RAW LLM RESPONSE
+    raw_answer = generate_llm_answer(query, context)
 
-    return {"answer": answer}
+    # 🔥 FORCE STRUCTURE HERE (ULTIMATE FIX)
+    final_answer = force_final_format(raw_answer)
+
+    return {"answer": final_answer}
 
 
 # ✅ PDF UPLOAD
@@ -46,7 +72,7 @@ async def upload_pdf(file: UploadFile = File(...)):
     return {"text": text}
 
 
-# ✅ HEALTH CHECK (IMPORTANT FOR RENDER)
+# ✅ ROOT (RENDER HEALTH CHECK)
 @app.get("/")
 def home():
     return {"message": "Intellora Backend Running 🚀"}
