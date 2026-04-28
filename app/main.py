@@ -1,59 +1,64 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import json
-from app.services.llm import generate_llm_answer
+from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from app.services.file_parser import extract_text
+from app.services.rag import ingest_document, retrieve_context
+import os
+from groq import Groq
 
-memory = {}
+app = FastAPI()
 
-class Handler(BaseHTTPRequestHandler):
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    def _set_headers(self):
-        self.send_response(200)
-        self.send_header("Content-type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "*")
-        self.send_header("Access-Control-Allow-Methods", "*")
-        self.end_headers()
+# GROQ CLIENT
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-    def do_OPTIONS(self):
-        self._set_headers()
-
-    def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        body = self.rfile.read(content_length)
-
-        if self.path == "/query":
-            data = json.loads(body)
-
-            query = data.get("query", "")
-            session_id = data.get("session_id", "default")
-            file_text = data.get("file_text", "")
-
-            history = memory.get(session_id, "")
-
-            context = ""
-            if file_text:
-                context += f"\nDOCUMENT:\n{file_text[:6000]}\n"
-
-            context += f"\nHISTORY:\n{history}"
-
-            answer = generate_llm_answer(query, context)
-
-            memory[session_id] = history + f"\nUser: {query}\nAI: {answer}"
-
-            self._set_headers()
-            self.wfile.write(json.dumps({"answer": answer}).encode())
-
-        else:
-            self._set_headers()
-            self.wfile.write(json.dumps({"error": "Invalid route"}).encode())
+# REQUEST MODEL
+class QueryRequest(BaseModel):
+    query: str
+    session_id: str = "default"
+    file_text: str = ""
 
 
-def run():
-    server_address = ('', 10000)
-    httpd = HTTPServer(server_address, Handler)
-    print("Server running on port 10000")
-    httpd.serve_forever()
+# ✅ QUERY API
+@app.post("/query")
+def query_api(data: QueryRequest):
+    query = data.query
+    file_text = data.file_text
+
+    # 🔥 RAG LOGIC
+    context = ""
+    if file_text:
+        ingest_document(file_text)
+        context = retrieve_context(query)
+
+    prompt = f"""
+Answer in clean bullet points.
+If code is asked → give proper formatted code block.
+
+Context:
+{context}
+
+Question:
+{query}
+"""
+
+    completion = client.chat.completions.create(
+        model="llama3-8b-8192",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return {"answer": completion.choices[0].message.content}
 
 
-if __name__ == "__main__":
-    run()
+# ✅ PDF UPLOAD API
+@app.post("/upload/pdf")
+async def upload_pdf(file: UploadFile = File(...)):
+    text = extract_text(file.file)
+    return {"text": text}
