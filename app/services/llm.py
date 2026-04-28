@@ -4,19 +4,25 @@ from groq import Groq
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-# 🔥 STRONG BULLET FORMATTER (FIXES YOUR ISSUE)
-def format_bullets(text: str):
-    # Split using bullet symbol
-    parts = text.split("•")
+# 🔥 FORMAT CLEAN LINE-BY-LINE (NO BULLETS)
+def format_clean_lines(text: str):
+    # Replace bullet symbols if model adds
+    text = text.replace("•", "\n")
+
+    # Split into lines
+    lines = text.split("\n")
 
     clean = []
-    for part in parts:
-        part = part.strip()
+    for line in lines:
+        line = line.strip()
 
-        if not part:
+        if not line:
             continue
 
-        clean.append(f"• {part}")
+        # Capitalize first letter nicely
+        line = line[0].upper() + line[1:] if len(line) > 1 else line
+
+        clean.append(line)
 
     return "\n".join(clean)
 
@@ -26,14 +32,15 @@ def generate_llm_answer(query: str, context: str = ""):
         prompt = f"""
 You are Intellora AI.
 
-STRICT RULES:
-- ONLY bullet points
-- Each point MUST start with "•"
-- NO paragraphs
-- Keep answers short and structured
+RULES:
+- DO NOT use bullet symbols (•)
+- DO NOT write paragraphs
+- Write each point on a NEW LINE
+- Each line should be clear and complete sentence
+- Keep answers detailed but structured
 - If code → use ``` blocks
 - If context exists → answer ONLY from it
-- If not found → say "• Not found in document"
+- If not found → say "Not found in document"
 
 Context:
 {context}
@@ -45,13 +52,13 @@ Question:
         res = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
+            temperature=0.4
         )
 
         raw = res.choices[0].message.content.strip()
 
-        # 🔥 FORCE PROPER LINE-BY-LINE BULLETS
-        return format_bullets(raw)
+        # 🔥 CLEAN FORMAT
+        return format_clean_lines(raw)
 
     except Exception as e:
-        return f"• ERROR: {str(e)}"
+        return f"Error: {str(e)}"
