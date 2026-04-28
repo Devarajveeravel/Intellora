@@ -1,15 +1,19 @@
 chunks = []
+embeddings = []
+
+
+def split_text(text, size=300):
+    words = text.split()
+    return [" ".join(words[i:i+size]) for i in range(0, len(words), size)]
+
 
 def ingest_document(text):
     global chunks
-    words = text.split()
-    chunks = [" ".join(words[i:i+300]) for i in range(0, len(words), 300)]
+    chunks = split_text(text)
+
 
 def retrieve_context(query, top_k=3):
-    global chunks
-
     if not chunks:
         return ""
 
-    # 🔥 simple fallback (no embeddings)
     return "\n".join(chunks[:top_k])

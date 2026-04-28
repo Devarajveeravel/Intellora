@@ -5,15 +5,12 @@ from groq import Groq
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-# 🔥 FORCE STRUCTURE (REAL FIX)
+# 🔥 FORCE CLEAN STRUCTURE (MAIN FIX)
 def force_structure(text: str):
-    # Remove bullet symbols
     text = text.replace("•", " ").replace("-", " ")
-
-    # Normalize spaces
     text = re.sub(r"\s+", " ", text)
 
-    # Split into sentences (very important)
+    # Split into sentences
     sentences = re.split(r'(?<=[.!?])\s+', text)
 
     clean = []
@@ -23,9 +20,7 @@ def force_structure(text: str):
         if not s:
             continue
 
-        # Capitalize properly
         s = s[0].upper() + s[1:] if len(s) > 1 else s
-
         clean.append(s)
 
     return "\n".join(clean)
@@ -38,9 +33,9 @@ You are Intellora AI.
 
 STRICT RULES:
 - Do NOT write paragraphs
-- Do NOT use bullet symbols
-- Write clear full sentences
-- Each idea must be a separate sentence
+- Do NOT use bullet points
+- Each sentence must be separate line
+- Keep answer detailed
 
 Context:
 {context}
@@ -50,14 +45,14 @@ Question:
 """
 
         res = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama-3.1-8b-instant",  # ✅ WORKING MODEL
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
         )
 
         raw = res.choices[0].message.content.strip()
 
-        # 🔥 HARD FIX HERE
+        # 🔥 HARD ENFORCE FORMAT
         return force_structure(raw)
 
     except Exception as e:
